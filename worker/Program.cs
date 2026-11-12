@@ -1,5 +1,6 @@
 using System;
 using System.Data.Common;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -16,22 +17,37 @@ namespace Worker
         {
             try
             {
-                var pgsql = OpenDbConnection("Server=localhost;Username=postgres;Password=postgres;");
-                var redisConn = OpenRedisConnection("localhost");
+                var pgHost = Environment.GetEnvironmentVariable("POSTGRES_HOST") ?? "db";
+                var pgPort = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5432";
+                var pgUser = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "postgres";
+                var pgPass = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "postgres";
+                var pgDb = Environment.GetEnvironmentVariable("POSTGRES_DB") ?? "postgres";
+                var pgConnString = $"Server={pgHost};Port={pgPort};Username={pgUser};Password={pgPass};Database={pgDb};";
+
+                var redisHost = Environment.GetEnvironmentVariable("REDIS_HOST") ?? "redis";
+
+                var pgsql = OpenDbConnection(pgConnString);
+                var redisConn = OpenRedisConnection(redisHost);
                 var redis = redisConn.GetDatabase();
 
                 var keepAliveCommand = pgsql.CreateCommand();
                 keepAliveCommand.CommandText = "SELECT 1";
+
+                // healthceck init
+                File.WriteAllText("/tmp/healthy", DateTime.UtcNow.ToString("o"));
 
                 var definition = new { vote = "", voter_id = "" };
                 while (true)
                 {
                     Thread.Sleep(100);
 
+                    //heartbeat
+                    File.WriteAllText("/tmp/healthy", DateTime.UtcNow.ToString("o"));
+
                     // Se reconnecter à Redis si la connexion est perdue
                     if (redisConn == null || !redisConn.IsConnected) {
                         Console.WriteLine("Reconnecting Redis");
-                        redisConn = OpenRedisConnection("localhost");
+                        redisConn = OpenRedisConnection(redisHost);
                         redis = redisConn.GetDatabase();
                     }
                     string json = redis.ListLeftPopAsync("votes").Result;
@@ -44,7 +60,7 @@ namespace Worker
                         if (!pgsql.State.Equals(System.Data.ConnectionState.Open))
                         {
                             Console.WriteLine("Reconnecting DB");
-                            pgsql = OpenDbConnection("Server=localhost;Username=postgres;Password=postgres;");
+                            pgsql = OpenDbConnection(pgConnString);
                         }
                         else
                         {
