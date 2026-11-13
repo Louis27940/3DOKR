@@ -15,3 +15,7 @@
 
 # Secrets and environment
 .env
+.env.*
+!.env.example
+secrets/*.txt
+!secrets/*.example.txt
