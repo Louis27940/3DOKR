@@ -7,9 +7,9 @@ let express = require("express"),
   methodOverride = require("method-override"),
   app = express(),
   server = require("http").Server(app),
-  io = require("socket.io")(server)
-
-io.set("transports", ["polling"])
+  io = require("socket.io")(server, {
+    transports: ["polling"]
+  })
 
 const port = 8888
 
