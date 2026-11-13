@@ -30,7 +30,7 @@ namespace Worker
                 }
                 else
                 {
-                    pgPass = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "postgres";
+                    throw new InvalidOperationException("No database password provided. Please set POSTGRES_PASSWORD_FILE (secret)");
                 }
 
                 var pgConnString = $"Server={pgHost};Port={pgPort};Username={pgUser};Password={pgPass};Database={pgDb};";
