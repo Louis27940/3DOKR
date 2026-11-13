@@ -1,25 +1,29 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0.404-alpine3.24 AS builder
+FROM golang:1.27.4-alpine3.23 AS builder
+
+RUN apk --no-cache add ca-certificates && \
+    addgroup -S -g 10001 appgroup && \
+    adduser -S -u 10001 -G appgroup appuser && \
+    mkdir -p /tmp && chown -R 10001:10001 /tmp
 
 WORKDIR /src
 
-COPY Worker.csproj ./
+COPY go.mod go.sum ./
+RUN go mod download
 
-RUN dotnet restore 
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags '-static'" -o /worker .
 
-COPY . ./ 
+FROM scratch
 
-RUN dotnet publish -c Release -o /src/publish --self-contained false --no-restore
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /etc/passwd /etc/passwd
+COPY --from=builder /etc/group /etc/group
+COPY --from=builder --chown=10001:10001 /tmp /tmp
+COPY --from=builder --chown=10001:10001 /worker /worker
 
-FROM mcr.microsoft.com/dotnet/runtime:10.0.15-alpine3.24-amd64 AS runner
+USER 10001:10001
 
-WORKDIR /app
+HEALTHCHECK --interval=15s --timeout=5s --start-period=5s --retries=3 \
+    CMD ["/worker", "-healthcheck"]
 
-COPY --from=builder --chown=app:app /src/publish/ .
-
-USER app
-
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD test -f /tmp/healthy || exit 1
-
-CMD ["dotnet", "Worker.dll"]
-
+ENTRYPOINT ["/worker"]
