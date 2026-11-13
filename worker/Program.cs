@@ -20,8 +20,19 @@ namespace Worker
                 var pgHost = Environment.GetEnvironmentVariable("POSTGRES_HOST") ?? "db";
                 var pgPort = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5432";
                 var pgUser = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "postgres";
-                var pgPass = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "postgres";
                 var pgDb = Environment.GetEnvironmentVariable("POSTGRES_DB") ?? "postgres";
+
+                var pgPassFile = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD_FILE");
+                string pgPass;
+                if (!string.IsNullOrEmpty(pgPassFile) && File.Exists(pgPassFile))
+                {
+                    pgPass = File.ReadAllText(pgPassFile).Trim();
+                }
+                else
+                {
+                    pgPass = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD") ?? "postgres";
+                }
+
                 var pgConnString = $"Server={pgHost};Port={pgPort};Username={pgUser};Password={pgPass};Database={pgDb};";
 
                 var redisHost = Environment.GetEnvironmentVariable("REDIS_HOST") ?? "redis";

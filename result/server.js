@@ -2,6 +2,7 @@ let express = require("express"),
   async = require("async"),
   pg = require("pg"),
   path = require("path"),
+  fs = require("fs"),
   cookieParser = require("cookie-parser"),
   bodyParser = require("body-parser"),
   methodOverride = require("method-override"),
@@ -22,12 +23,23 @@ io.sockets.on("connection", function (socket) {
   })
 })
 
+function getDbPassword() {
+  if (process.env.POSTGRES_PASSWORD_FILE) {
+    try {
+      return fs.readFileSync(process.env.POSTGRES_PASSWORD_FILE, "utf8").trim()
+    } catch (err) {
+      console.error("Failed to read POSTGRES_PASSWORD_FILE:", err.message)
+    }
+  }
+  return process.env.POSTGRES_PASSWORD
+}
+
 const pool = new pg.Pool({
       host: process.env.POSTGRES_HOST || 'db',
       port: process.env.POSTGRES_PORT || 5432,
       database: process.env.POSTGRES_DB || 'postgres',
       user: process.env.POSTGRES_USER || 'postgres',
-      password: process.env.POSTGRES_PASSWORD,
+      password: getDbPassword(),
     })
 
 async.retry(
