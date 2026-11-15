@@ -115,8 +115,13 @@ Ensure the PostgreSQL password secret file exists at `secrets/db_password.txt`. 
 mkdir -p secrets
 echo "your_db_password" > secrets/db_password.txt
 ```
+Ensure the .env file also exist at the root directory of the project. If not generate it : 
 
-- **Note**: The `secrets/` directory is excluded from version control via `.gitignore` to avoid credential leaks.
+```bash
+cp .env.example .env
+```
+
+- **Note**: The `secrets/` directory and the `.env` file are excluded from version control via `.gitignore` to avoid credential leaks.
 
 ### 3.3 Running the Application
 
